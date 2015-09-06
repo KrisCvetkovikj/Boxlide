@@ -1,10 +1,17 @@
 package com.finki.ukim.mk.mpip.boxlide;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.cocos2d.layers.CCScene;
 import org.cocos2d.nodes.CCDirector;
 import org.cocos2d.opengl.CCGLSurfaceView;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -13,10 +20,16 @@ import android.view.WindowManager;
 
 public class MainActivity extends Activity {
 
+	public static MainActivity app;
+	public static final int CAMERA_REQUEST_CODE = 1;
+	public static final int GALLERY_REQUEST_CODE = 3;
+	public static Bitmap bitmap = null;
 	protected CCGLSurfaceView _glSurfaceView;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+
+		app = this;
 		super.onCreate(savedInstanceState);
 
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -29,14 +42,14 @@ public class MainActivity extends Activity {
 
 		CCDirector director = CCDirector.sharedDirector();
 		director.attachInView(_glSurfaceView);
-		director.setDeviceOrientation(CCDirector.kCCDeviceOrientationPortrait); // set
-																				// orientation
+		director.setDeviceOrientation(CCDirector.kCCDeviceOrientationLandscapeLeft); // set
+		// orientation
 		CCDirector.sharedDirector().setDisplayFPS(true); // display fps
 		CCDirector.sharedDirector().setAnimationInterval(1.0f / 60.0f); // set
 																		// frame
 																		// rate
 
-		CCScene scene = GameLayer.scene();
+		CCScene scene = SlidingMenuLayer.scene(); //
 		CCDirector.sharedDirector().runWithScene(scene);
 	}
 
@@ -75,5 +88,66 @@ public class MainActivity extends Activity {
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// For Handling Camera Intent
+		if (requestCode == CAMERA_REQUEST_CODE
+				&& resultCode == Activity.RESULT_OK) {
+
+			try {
+				MainActivity.bitmap = (Bitmap) data.getExtras().get("data");
+				CCScene scene = PictureGameLayer.scene(); //
+				CCDirector.sharedDirector().runWithScene(scene);
+			} catch (Exception e) {
+				try {
+					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		}
+
+		// For Handling Picture Gallery Intent
+		if (requestCode == GALLERY_REQUEST_CODE
+				&& resultCode == Activity.RESULT_OK) {
+			// We need to recyle unused bitmaps
+			if (MainActivity.bitmap != null) {
+				MainActivity.bitmap.recycle();
+			}
+
+			try {
+				InputStream stream;
+				stream = getContentResolver().openInputStream(data.getData());
+				MainActivity.bitmap = Bitmap.createBitmap(BitmapFactory
+						.decodeStream(stream));
+				stream.close();
+
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				try {
+					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				e.printStackTrace();
+			} catch (IOException e) {
+				try {
+					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			CCScene scene = PictureGameLayer.scene(); //
+			CCDirector.sharedDirector().runWithScene(scene);
+		}
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 }
