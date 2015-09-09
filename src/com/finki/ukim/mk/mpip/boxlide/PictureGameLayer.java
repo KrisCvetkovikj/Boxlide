@@ -2,6 +2,9 @@ package com.finki.ukim.mk.mpip.boxlide;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import org.cocos2d.actions.instant.CCCallFuncN;
 import org.cocos2d.actions.interval.CCDelayTime;
@@ -20,7 +23,6 @@ import org.cocos2d.nodes.CCSprite;
 import org.cocos2d.nodes.CCSpriteFrame;
 import org.cocos2d.opengl.CCBitmapFontAtlas;
 import org.cocos2d.opengl.CCTexture2D;
-import org.cocos2d.sound.SoundEngine;
 import org.cocos2d.types.CGPoint;
 import org.cocos2d.types.CGRect;
 import org.cocos2d.types.CGSize;
@@ -33,6 +35,7 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.preference.PreferenceManager;
 import android.view.MotionEvent;
 
 public class PictureGameLayer extends CCLayer {
@@ -58,6 +61,8 @@ public class PictureGameLayer extends CCLayer {
 	private Context appcontext;
 	public static boolean gameover = false;
 
+	// for name input
+
 	public PictureGameLayer() {
 
 		this.setIsTouchEnabled(true);
@@ -72,8 +77,7 @@ public class PictureGameLayer extends CCLayer {
 		addChild(background, -5);
 
 		// Add Game Status Label
-		statusLabel = CCBitmapFontAtlas.bitmapFontAtlas("Tap Tiles to Begin",
-				"magneto.fnt");
+		statusLabel = CCBitmapFontAtlas.bitmapFontAtlas(" ", "magneto.fnt");
 		statusLabel.setScale(0.5f * generalscalefactor);
 		statusLabel.setAnchorPoint(CGPoint.ccp(0, 1));
 		statusLabel.setPosition(CGPoint.ccp(25 * generalscalefactor,
@@ -155,9 +159,19 @@ public class PictureGameLayer extends CCLayer {
 		// space left after adding the status label at the top
 		int nextval;
 
-		int[] tileNumbers = { 5, 1, 2, 8, 7, 6, 0, 4, 3 }; // random but
-															// solvable sequence
-															// of numbers
+		List<Integer> randTiles = new ArrayList<Integer>();
+		for (int i = 0; i < 9; i++) {
+			randTiles.add(i);
+		}
+
+		int[] tileNumbers = new int[9];
+		for (int i = 0; i < 9; i++) {
+			int randpos = new Random().nextInt(9 - i);
+			tileNumbers[i] = randTiles.get(randpos);
+			randTiles.remove(randpos);
+		}
+
+		// int[] tileNumbers = { 1, 2, 3, 4, 5, 6, 7, 0, 8 };
 
 		// TILE_SQUARE_SIZE = (int) ((screenSize.height
 		// *generalscalefactor)/NUM_ROWS) ;
@@ -326,10 +340,6 @@ public class PictureGameLayer extends CCLayer {
 			moveslabel
 					.setString("Moves : " + CCFormatter.format("%03d", moves));
 
-			// Update statuslabel
-			statusLabel.setString("Tile : " + thenode.getNodeText() + " -> "
-					+ direction);
-
 			// Animate the tile to slide it
 			CGPoint nodePosition = thenode.getPosition();
 			CGPoint tempPosition = emptyPosition;
@@ -351,7 +361,7 @@ public class PictureGameLayer extends CCLayer {
 
 	public void handleWin(Object sender) {
 		if (checkCorrect()) {
-			// gameover = true ;
+			gameover = true;
 
 			// SoundEngine.sharedEngine().playEffect(appcontext, R.raw.cheer);
 
@@ -389,6 +399,26 @@ public class PictureGameLayer extends CCLayer {
 	public void WinCallback(Object sender) {
 		unschedule("updateTimeLabel"); // stop the timer
 
+		appcontext = CCDirector.sharedDirector().getActivity();
+
+		Singleton.getInstance().highscore = PreferenceManager
+				.getDefaultSharedPreferences(appcontext).getInt("highscore",
+						Singleton.getInstance().highscore);
+		boolean newhs = false;
+
+		if (thetime < Singleton.getInstance().highscore) {
+			Singleton.getInstance().highscore = thetime;
+			PreferenceManager.getDefaultSharedPreferences(appcontext).edit()
+					.putInt("highscore", Singleton.getInstance().highscore)
+					.commit();
+			newhs = true;
+		}
+
+		ccMacros.CCLOG("hs", String.format("%02d:%02d",
+				(int) Singleton.getInstance().highscore / 60,
+				(int) Singleton.getInstance().highscore % 60));
+		ccMacros.CCLOG("newhs", String.format("%d", (newhs == true) ? 1 : 0));
+
 		// Create a dark semi-transparent layer called pauseOverlay and add over
 		// our scene
 		CCColorLayer pauseOverlay = CCColorLayer.node(ccColor4B.ccc4(25, 25,
@@ -411,7 +441,7 @@ public class PictureGameLayer extends CCLayer {
 		gamemoves.runAction(CCSequence.actions(CCDelayTime.action(0.5f),
 				CCScaleBy.action(0.2f, 2.0f)));
 
-		// Some instruction for the user to procee
+		// Some instruction for the user to proceed
 		CCBitmapFontAtlas instructionFontAtlas = CCBitmapFontAtlas
 				.bitmapFontAtlas("TAP Back button below to continue!",
 						"magneto.fnt");
@@ -433,29 +463,46 @@ public class PictureGameLayer extends CCLayer {
 										- gamemoves.getContentSize().height
 										* generalscalefactor * 2.0f))));
 
-		// Show amount of time in a lable
-		CCBitmapFontAtlas gametime = CCBitmapFontAtlas.bitmapFontAtlas(
-				CCFormatter.format("%02d:%02d", (int) (thetime / 60),
-						(int) thetime % 60), "magneto.fnt");
-		gametime.setAnchorPoint(CGPoint.ccp(0, 1));
-		gametime.setScale(generalscalefactor);
-		gametime.setAnchorPoint(0.5f, 1f);
-		gametime.setPosition(CGPoint.ccp(screenSize.width / 2.0f,
-				gamemoves.getPosition().y + gamemoves.getContentSize().height
-						* generalscalefactor / 2.0f + 10));
-		pauseOverlay.addChild(gametime, 301);
+		// Show amount of time in a label
+		if (newhs) {
+			CCBitmapFontAtlas gametime = CCBitmapFontAtlas.bitmapFontAtlas(
+					CCFormatter.format("%02d:%02d NEW HIGHSCORE!",
+							(int) (thetime / 60), (int) thetime % 60),
+					"magneto.fnt");
+			gametime.setAnchorPoint(CGPoint.ccp(0, 1));
+			gametime.setScale(generalscalefactor);
+			gametime.setAnchorPoint(0.5f, 1f);
+			gametime.setPosition(CGPoint.ccp(screenSize.width / 2.0f,
+					gamemoves.getPosition().y
+							+ gamemoves.getContentSize().height
+							* generalscalefactor / 2.0f + 10));
+			pauseOverlay.addChild(gametime, 301);
+		} else {
+			CCBitmapFontAtlas gametime = CCBitmapFontAtlas.bitmapFontAtlas(
+					CCFormatter.format("%02d:%02d", (int) (thetime / 60),
+							(int) thetime % 60), "magneto.fnt");
+			gametime.setAnchorPoint(CGPoint.ccp(0, 1));
+			gametime.setScale(generalscalefactor);
+			gametime.setAnchorPoint(0.5f, 1f);
+			gametime.setPosition(CGPoint.ccp(screenSize.width / 2.0f,
+					gamemoves.getPosition().y
+							+ gamemoves.getContentSize().height
+							* generalscalefactor / 2.0f + 10));
+			pauseOverlay.addChild(gametime, 301);
+		}
 
 		// reset time to zero
 
-		/*CCBitmapFontAtlas label = CCBitmapFontAtlas.bitmapFontAtlas("BACK",
-				"magneto.fnt");
-		CCMenuItemLabel item5 = CCMenuItemLabel.item(label, this,
-				"backCallback");
-
-		CCMenu resumemenu = CCMenu.menu(item5);
-		resumemenu.setPosition(CGPoint.make(label.getContentSize().width,
-				label.getContentSize().width));
-		pauseOverlay.addChild(resumemenu, 800);*/
+		/*
+		 * CCBitmapFontAtlas label = CCBitmapFontAtlas.bitmapFontAtlas("BACK",
+		 * "magneto.fnt"); CCMenuItemLabel item5 = CCMenuItemLabel.item(label,
+		 * this, "backCallback");
+		 * 
+		 * CCMenu resumemenu = CCMenu.menu(item5);
+		 * resumemenu.setPosition(CGPoint.make(label.getContentSize().width,
+		 * label.getContentSize().width)); pauseOverlay.addChild(resumemenu,
+		 * 800);
+		 */
 
 	}
 

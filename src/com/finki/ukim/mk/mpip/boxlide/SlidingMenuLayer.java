@@ -1,9 +1,11 @@
 package com.finki.ukim.mk.mpip.boxlide;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.Random;
 
 import org.cocos2d.config.ccMacros;
-import org.cocos2d.extensions.scroll.CCClipNode;
 import org.cocos2d.extensions.scroll.CCScrollView;
 import org.cocos2d.layers.CCLayer;
 import org.cocos2d.layers.CCScene;
@@ -15,6 +17,10 @@ import org.cocos2d.types.CGPoint;
 import org.cocos2d.types.CGRect;
 import org.cocos2d.types.CGSize;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.preference.PreferenceManager;
 import android.view.MotionEvent;
 
 public class SlidingMenuLayer extends CCLayer {
@@ -23,7 +29,6 @@ public class SlidingMenuLayer extends CCLayer {
 	CCScrollView scrollView;
 	CCBitmapFontAtlas statusLabel;
 	private CGPoint startlocation; // keep track of touch starting point
-	private CGPoint endlocation; // //keep track of touch ending point
 	float tilescale;
 
 	float generalscalefactor = 0.0f;
@@ -53,7 +58,7 @@ public class SlidingMenuLayer extends CCLayer {
 		tilesNode.setTag(TILES_NODE_TAG);
 		addChild(tilesNode);
 
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 4; i++) {
 			// A meu image sprite
 			tilebox = CCSprite.sprite("menu" + (i + 1) + ".png");
 			tilebox.setAnchorPoint(0.5f, 0.5f);
@@ -97,7 +102,24 @@ public class SlidingMenuLayer extends CCLayer {
 		switch (i) {
 		case 0:
 			try {
-				PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
+
+				File f = new File("images/");
+				File[] listOfFiles = f.listFiles();
+				String[] imageNames = { "images/wallhaven121852.jpg",
+						"images/wallhaven152578.jpg",
+						"images/wallhaven161682.jpg",
+						"images/wallhaven162495.jpg",
+						"images/wallhaven174368.jpg",
+						"images/wallhaven175114.jpg",
+						"images/wallhaven230769.jpg",
+						"images/wallhaven37106.jpg",
+						"images/wallhaven60979.jpg",
+						"images/wallhaven65974.jpg" };
+
+				PictureGameLayer
+						.getBitmapFromAsset(imageNames[new Random().nextInt(10)]);
+				// PictureGameLayer.getBitmapFromAsset(listImages[new
+				// Random().nextInt(10)]);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -111,10 +133,65 @@ public class SlidingMenuLayer extends CCLayer {
 		case 2:
 			PictureGameLayer.getBitMapFromGallery();
 			break;
+		case 3:
+			showHighscores();
 		default:
 			break;
 		}
 
+	}
+
+	public void showHighscores() {
+		Context appcontext = CCDirector.sharedDirector().getActivity();
+		Singleton.getInstance().highscore = PreferenceManager
+				.getDefaultSharedPreferences(appcontext).getInt("highscore",
+						Singleton.getInstance().highscore);
+		int highscore = Singleton.getInstance().highscore;
+
+		final StringBuilder viewHS = new StringBuilder("CURRENT HIGHSCORE");
+		viewHS.append("\n\n");
+		if (highscore == Integer.MAX_VALUE) {
+			viewHS.append("No current highscore.");
+		} else {
+			viewHS.append(String.format("%02d:%02d", (int) highscore / 60,
+					(int) highscore % 60));
+		}
+		ccMacros.CCLOG("hs", String.format("%02d:%02d", (int) highscore / 60,
+				(int) highscore % 60));
+
+		CCDirector.sharedDirector().getActivity().runOnUiThread(new Runnable() {
+			public void run() {
+				AlertDialog.Builder builder = new AlertDialog.Builder(
+						CCDirector.sharedDirector().getActivity());
+				builder.setMessage(viewHS.toString())
+						.setCancelable(false)
+						.setPositiveButton("Clear",
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int id) {
+										Context appcontext = CCDirector
+												.sharedDirector().getActivity();
+										PreferenceManager
+												.getDefaultSharedPreferences(
+														appcontext)
+												.edit()
+												.putInt("highscore",
+														Integer.MAX_VALUE)
+												.commit();
+										dialog.cancel();
+									}
+								})
+						.setNegativeButton("OK",
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int id) {
+										dialog.cancel();
+									}
+								});
+				AlertDialog alert = builder.create();
+				alert.show();
+			}
+		});
 	}
 
 	@Override
@@ -136,7 +213,7 @@ public class SlidingMenuLayer extends CCLayer {
 		CCNode tilesNode = (CCNode) getChildByTag(TILES_NODE_TAG);
 
 		// We loop through each of the tiles and get its cordinates
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 4; i++) {
 			CCSprite eachNode = (CCSprite) tilesNode.getChildByTag(i);
 
 			// we construct a rectangle covering the current tiles cordinates

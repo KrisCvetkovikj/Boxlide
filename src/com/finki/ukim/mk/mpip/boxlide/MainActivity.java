@@ -101,12 +101,6 @@ public class MainActivity extends Activity {
 				CCScene scene = PictureGameLayer.scene(); //
 				CCDirector.sharedDirector().runWithScene(scene);
 			} catch (Exception e) {
-				try {
-					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
 			}
 		}
 
@@ -126,23 +120,7 @@ public class MainActivity extends Activity {
 				stream.close();
 
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				try {
-					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				e.printStackTrace();
 			} catch (IOException e) {
-				try {
-					PictureGameLayer.getBitmapFromAsset("pacific_rim.jpg");
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 
 			CCScene scene = PictureGameLayer.scene(); //
